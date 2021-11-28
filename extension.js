@@ -186,11 +186,6 @@ class PapyrusManager {
         }
 
         var next_step = () => {
-                if (window.get_window_type() != Meta.WindowType.NORMAL) {
-                    _debug_log(`not a normal type, ignore`);
-                    return;
-                }
-
                 if (this._ignore_window(window)) {
                     _debug_log(`ignore window "${window.title}", just watch focus`);
                     this._connect_window_once(window, "focus", this.on_ignored_window_focus.bind(this));
@@ -273,9 +268,24 @@ class PapyrusManager {
     }
 
     on_ignored_window_focus(window) {
+        _debug_log(`ignored window "${window.title}" focused`);
         if (this.workspace.active && this.managed_windows.length) {
-            var base_window = this._last_focused_window();
-            this.rearrange_windows(base_window, false, true);
+            var base_window = window;
+            // ignored window might be a dialog which attached to managed window
+            // if so, use the managed one as a rearrenge base
+            while (base_window.get_transient_for()) {
+                base_window = base_window.get_transient_for();
+            }
+            if (this.managed_windows.includes(base_window)) {
+                // ansestor window is managed
+                // use it as a base window and show it
+                this.rearrange_windows(base_window, true, true);
+            } else {
+                // ansestor window is not managed (or, not a dialog window in the first place)
+                // use last focused window as a base but no need to show it
+                base_window = this._last_focused_window();
+                this.rearrange_windows(base_window, false, true);
+            }
 
         }
     }
