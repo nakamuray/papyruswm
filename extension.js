@@ -565,6 +565,11 @@ function _get_y_offset(window) {
 
 class Spotlight {
     constructor() {
+        this.target_types = new Set([
+            Meta.WindowType.NORMAL,
+            Meta.WindowType.DIALOG,
+            Meta.WindowType.MODAL_DIALOG,
+        ]);
         this._window = null;
         this._window_handler_ids = [];
         this._actor_handler_ids = [];
@@ -577,8 +582,7 @@ class Spotlight {
             return;
         }
 
-        if (window && window.get_window_type() != Meta.WindowType.NORMAL) {
-            // XXX: should I allow DIALOG and MODAL_DIALOG?
+        if (!this.target_types.has(window?.get_window_type())) {
             return;
         }
 
