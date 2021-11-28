@@ -1,0 +1,9 @@
+/* Add your custom extension styling here */
+
+.papyrus-spotlight {
+    /* border-style: solid; */
+    border-width: 1px;
+    border-radius: 8px;
+    border-color: white;
+    background-color: rgba(255, 255, 255, 0.7);
+}

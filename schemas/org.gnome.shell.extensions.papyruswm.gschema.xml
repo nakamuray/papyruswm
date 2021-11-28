@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.papyruswm" path="/org/gnome/shell/extensions/papyruswm/">
+    <key type="as" name="papyrus-move-focus-next">
+      <default><![CDATA[['<Super>period']]]></default>
+      <summary>Move focus to the next window</summary>
+    </key>
+    <key type="as" name="papyrus-move-focus-previous">
+      <default><![CDATA[['<Super>comma']]]></default>
+      <summary>Move focus to the previous window</summary>
+    </key>
+
+    <key type="as" name="papyrus-swap-next">
+      <default><![CDATA[['<Super><Ctrl>period']]]></default>
+      <summary>Swap the focused window with the next window</summary>
+    </key>
+    <key type="as" name="papyrus-swap-previous">
+      <default><![CDATA[['<Super><Ctrl>comma']]]></default>
+      <summary>Swap the focused window with the previous window</summary>
+    </key>
+
+    <key type="as" name="papyrus-toggle-float">
+      <default><![CDATA[['<Super>T']]]></default>
+      <summary>Toggle window floating</summary>
+    </key>
+
+    <key type="as" name="papyrus-cycle-resize-window">
+      <default><![CDATA[['<Super>R']]]></default>
+      <summary>Resize window horizontally</summary>
+    </key>
+    <key type="as" name="papyrus-cycle-resize-window-vertically">
+      <default><![CDATA[['<Super><Shift>R']]]></default>
+      <summary>Resize window vertically</summary>
+    </key>
+  </schema>
+</schemalist>

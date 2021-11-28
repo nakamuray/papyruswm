@@ -1,0 +1,10 @@
+{
+  "name": "PapyrusWM",
+  "description": "Scrolled tiling window manager",
+  "uuid": "papyruswm@u7fa9.org",
+  "settings-schema": "org.gnome.shell.extensions.papyruswm",
+  "shell-version": [
+    "41"
+  ],
+  "version": 1
+}
