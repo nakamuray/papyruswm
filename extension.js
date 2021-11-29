@@ -556,7 +556,17 @@ function _get_y_offset(window) {
     var panel_height = window.is_fullscreen() ? 0 : Main.panel.height;
     var space = (window.is_fullscreen() || window.maximized_vertically) ? 0 : _scaled_window_space() / 2;
 
-    var y_offset = window.has_focus() ? 0 : OUT_OF_FOCUS_WINDOW_Y_OFFSET;
+    var has_focus = window.has_focus();
+    if (!has_focus) {
+        window.foreach_transient((win) => {
+            // XXX: should I also check win is not a NORMAL type?
+            if (win.has_focus()) {
+                // if window attached to it (like dialog) has focus, treat it has focus
+                has_focus = true;
+            }
+        });
+    }
+    var y_offset = has_focus ? 0 : OUT_OF_FOCUS_WINDOW_Y_OFFSET;
     var y = Math.floor(display_height * y_offset) + panel_height + space;
     _debug_log(`display.height = ${display_height}, y_offset = ${y_offset}, panel.height = ${panel_height}, panel.visible = ${Main.panel.visible}, space = ${space}, y = ${y}`);
 
