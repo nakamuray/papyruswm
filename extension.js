@@ -265,6 +265,25 @@ class PapyrusManager {
         }
 
         this.rearrange_windows(window, true, true);
+
+        if (Main.overview.visible) {
+            return;
+        }
+
+        // if cursor not on the window, move it on it
+        var [cursor_x, cursor_y] = cursor.get_pointer();
+        var rect = window.get_frame_rect();
+
+        if (cursor_x < rect.x
+            || cursor_x > rect.x + rect.width
+            || cursor_y < rect.y
+            || cursor_y > rect.y + rect.height) {
+            cursor.move(
+                Math.floor(rect.x + rect.width / 2),
+                Math.floor(rect.y + rect.height / 2),
+                WINDOW_MOVE_DURATION
+            );
+        }
     }
 
     on_ignored_window_focus(window) {
@@ -692,6 +711,64 @@ class Spotlight {
     }
 }
 
+class Cursor {
+    constructor() {
+        var FPS = 30;
+
+        this._millisec_per_frame = Math.floor(1000 / FPS);
+        this._motion_points = [];
+
+        var seat = Clutter.get_default_backend().get_default_seat();
+        this._cursor = seat.create_virtual_device(Clutter.InputDeviceType.CURSOR_DEVICE);
+
+        this._timeout_handler_id = null;
+    }
+    get_pointer() {
+        var [x, y, _] = global.get_pointer();
+        return [x, y];
+    }
+    move(x, y, duration) {
+        duration = duration || 0;
+
+        var frame_in_duration = Math.floor(duration / this._millisec_per_frame);
+        if (frame_in_duration == 0) {
+            this._cursor.notify_absolute_motion(global.get_current_time(), x, y);
+            return;
+        }
+
+        var [current_x, current_y] = this.get_pointer();
+        for (var i = 1; i < frame_in_duration; i++) {
+            this._motion_points.push([
+                Math.floor(current_x + i * (x - current_x) / frame_in_duration),
+                Math.floor(current_y + i * (y - current_y) / frame_in_duration),
+            ]);
+        }
+        this._motion_points.push([x, y]);
+        this._start_move();
+    }
+    _start_move() {
+        if (this._timeout_handler_id !== null) {
+            return;
+        }
+        this._timeout_handler_id = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this._millisec_per_frame, this.on_timeout.bind(this));
+    }
+    on_timeout() {
+        if (this._motion_points.length == 0) {
+            this._timeout_handler_id = null;
+            return false;
+        }
+        var [x, y] = this._motion_points.shift();
+        this._cursor.notify_absolute_motion(global.get_current_time(), x, y);
+        return true;
+    }
+    destroy() {
+        // XXX: Can I stop timeout handler directly?
+        this._motion_points = [];
+    }
+}
+
+var cursor = null;
+
 class Extension {
     constructor() {
         this._enabled = false;
@@ -800,6 +877,8 @@ class Extension {
             this._spotlight.focus(global.display.focus_window);
         }
 
+        cursor = new Cursor();
+
         this._enabled = true;
     }
 
@@ -824,6 +903,9 @@ class Extension {
 
         this._spotlight.destroy();
         this._spotlight = null;
+
+        cursor.destroy();
+        cursor = null;
 
         this._enabled = false;
     }
