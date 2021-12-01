@@ -731,7 +731,7 @@ class Cursor {
         duration = duration || 0;
 
         var frame_in_duration = Math.floor(duration / this._millisec_per_frame);
-        if (frame_in_duration == 0) {
+        if (!St.Settings.get().enable_animations || frame_in_duration == 0) {
             this._cursor.notify_absolute_motion(global.get_current_time(), x, y);
             return;
         }
