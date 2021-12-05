@@ -279,11 +279,8 @@ class PapyrusManager {
             || cursor_x > rect.x + rect.width
             || cursor_y < rect.y
             || cursor_y > rect.y + rect.height) {
-            cursor.move(
-                Math.floor(rect.x + rect.width / 2),
-                Math.floor(rect.y + rect.height / 2),
-                WINDOW_MOVE_DURATION
-            );
+            var [x, y] = _get_move_point(cursor_x, cursor_y, rect);
+            cursor.move(x, y, WINDOW_MOVE_DURATION);
         }
     }
 
@@ -591,6 +588,23 @@ function _get_y_offset(window) {
     _debug_log(`display.height = ${display_height}, y_offset = ${y_offset}, panel.height = ${panel_height}, panel.visible = ${Main.panel.visible}, space = ${space}, y = ${y}`);
 
     return y;
+}
+
+function _get_move_point(cursor_x, cursor_y, window_rect) {
+    const split_num = 3;
+    var points = [];
+    for (var i = 1; i < split_num; i++) {
+        for (var j = 1; j < split_num; j++) {
+            var x = window_rect.x + Math.floor(window_rect.width * i / split_num);
+            var y = window_rect.y + Math.floor(window_rect.height * j / split_num);
+            var d = Math.abs(Math.sqrt((cursor_x - x) ** 2 + (cursor_y - y) ** 2));
+            points.push([d, x, y]);
+        }
+    }
+    points.sort((a, b) => a[0] - b[0]);
+    _debug_log(`points: ${points}`);
+    var [_, x, y] = points.shift();
+    return [x, y];
 }
 
 class Spotlight {
