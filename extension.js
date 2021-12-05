@@ -794,6 +794,90 @@ class Cursor {
 
 var cursor = null;
 
+class Gesture {
+    constructor() {
+        this.finger_count = 4;
+
+        this._target_window = null;
+        this._capture_handler_id = global.stage.connect('captured-event::touchpad', this.on_capture_event.bind(this));
+    }
+    destroy() {
+        global.stage.disconnect(this._capture_handler_id);
+        this._capture_handler_id = null;
+    }
+    on_capture_event(actor, event) {
+        if (event.type() !== Clutter.EventType.TOUCHPAD_SWIPE) {
+            return Clutter.EVENT_PROPAGATE;
+        }
+        if (event.get_touchpad_gesture_finger_count() != this.finger_count) {
+            return Clutter.EVENT_PROPAGATE;
+        }
+        if (Main.overview.visible) {
+            return Clutter.EVENT_PROPAGATE;
+        }
+
+        switch (event.get_gesture_phase()) {
+            case Clutter.TouchpadGesturePhase.BEGIN:
+                return this._gesture_begin(event);
+
+            case Clutter.TouchpadGesturePhase.UPDATE:
+                return this._gesture_update(event);
+
+            default:
+                return this._gesture_end(event);
+        }
+
+        return Clutter.EVENT_STOP;
+    }
+    _gesture_begin(event) {
+        const [x, y] = event.get_coords();
+
+        var target_actor = global.stage.get_actor_at_pos(Clutter.PickMode.REACTIVE, x, y).get_parent();
+        if (target_actor.meta_window) {
+            this._target_window = target_actor.meta_window;
+        } else if (global.display.focus_window) {
+            this._target_window = global.display.focus_window;
+        } else {
+            return Clutter.EVENT_PROPAGATE;
+        }
+
+        if (!this._target_window.has_focus()) {
+            this._target_window.raise();
+            this._target_window.focus(global.get_current_time());
+        }
+
+        if (this._target_window.is_fullscreen()) {
+            this._target_window.unmake_fullscreen();
+        }
+        if (this._target_window.maximized_vertically || this._target_window.maximized_horizontally) {
+            this._target_window.unmaximize(Meta.MaximizeFlags.BOTH);
+        }
+
+        // can't I change cursor using this method?
+        global.display.set_cursor(Meta.Cursor.MOVE_OR_RESIZE_WINDOW);
+
+        return Clutter.EVENT_STOP;
+    }
+    _gesture_update(event) {
+        if (!this._target_window) {
+            return Clutter.EVENT_PROPAGATE;
+        }
+        const [dx, dy] = event.get_gesture_motion_delta();
+
+        var rect = this._target_window.get_frame_rect();
+        this._target_window.move_frame(true, rect.x + dx, rect.y + dy);
+
+        global.display.set_cursor(Meta.Cursor.MOVE_OR_RESIZE_WINDOW);
+
+        return Clutter.EVENT_STOP
+    }
+    _gesture_end(event) {
+        this._target_window = null;
+        global.display.set_cursor(Meta.Cursor.DEFAULT);
+        return Clutter.EVENT_STOP;
+    }
+}
+
 class Extension {
     constructor() {
         this._enabled = false;
@@ -802,6 +886,7 @@ class Extension {
         this._resize_state = {id: null, index: 0};
         this._vertical_resize_state = {id: null, index: 0};
         this._spotlight = null;
+        this._gesture = null;
     }
 
     enable() {
@@ -902,6 +987,8 @@ class Extension {
             this._spotlight.focus(global.display.focus_window);
         }
 
+        this._gesture = new Gesture();
+
         cursor = new Cursor();
 
         this._enabled = true;
@@ -928,6 +1015,9 @@ class Extension {
 
         this._spotlight.destroy();
         this._spotlight = null;
+
+        this._gesture.destroy();
+        this._gesture = null;
 
         cursor.destroy();
         cursor = null;

@@ -20,6 +20,10 @@ restart gnome-shell and enable it using Extensions app.
 | <kbd>&lt;Super&gt;R</kbd>              | Resize window horizontally                       |
 | <kbd>&lt;Super&gt;&lt;Shift&gt;R</kbd> | Resize window vertically                         |
 
+## Touchpad Gesture
+
+4-finger swipe on touchpad allows you to move window.
+
 ## Settings
 
 PapyrusWM doesn't have preference dialog.
@@ -39,5 +43,4 @@ papyrus-toggle-float
 ## TODO
 
 * multi-monitor
-* touchpad gesture
 * stack windows vertically
