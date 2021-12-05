@@ -733,14 +733,14 @@ class Cursor {
         this._millisec_per_frame = Math.floor(1000 / FPS);
         this._motion_points = [];
 
-        var seat = Clutter.get_default_backend().get_default_seat();
-        this._cursor = seat.create_virtual_device(Clutter.InputDeviceType.CURSOR_DEVICE);
-
         this._timeout_handler_id = null;
 
         this._ripples = new Ripples.Ripples(0.5, 0.5, 'ripple-pointer-location');
         this._ripples.addTo(Main.uiGroup);
 
+    }
+    get_seat() {
+        return Clutter.get_default_backend().get_default_seat();
     }
     get_pointer() {
         var [x, y, _] = global.get_pointer();
@@ -751,7 +751,7 @@ class Cursor {
 
         var frame_in_duration = Math.floor(duration / this._millisec_per_frame);
         if (!St.Settings.get().enable_animations || frame_in_duration == 0) {
-            this._cursor.notify_absolute_motion(global.get_current_time(), x, y);
+            this.get_seat().warp_pointer(x, y);
             return;
         }
 
@@ -777,7 +777,7 @@ class Cursor {
             return false;
         }
         var [x, y] = this._motion_points.shift();
-        this._cursor.notify_absolute_motion(global.get_current_time(), x, y);
+        this.get_seat().warp_pointer(x, y);
         if (this._motion_points.length == 0) {
             this._ripples.playAnimation(x, y);
         }
