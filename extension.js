@@ -23,6 +23,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 const mainloop = imports.mainloop;
 const { Clutter, GLib, Gio, Meta, Shell, St } = imports.gi;
 const Main = imports.ui.main;
+const Ripples = imports.ui.ripples;
 
 const OUT_OF_FOCUS_WINDOW_Y_OFFSET = 0.05;
 const WINDOW_SPACE = 16;
@@ -722,6 +723,10 @@ class Cursor {
         this._cursor = seat.create_virtual_device(Clutter.InputDeviceType.CURSOR_DEVICE);
 
         this._timeout_handler_id = null;
+
+        this._ripples = new Ripples.Ripples(0.5, 0.5, 'ripple-pointer-location');
+        this._ripples.addTo(Main.uiGroup);
+
     }
     get_pointer() {
         var [x, y, _] = global.get_pointer();
@@ -759,11 +764,17 @@ class Cursor {
         }
         var [x, y] = this._motion_points.shift();
         this._cursor.notify_absolute_motion(global.get_current_time(), x, y);
+        if (this._motion_points.length == 0) {
+            this._ripples.playAnimation(x, y);
+        }
         return true;
     }
     destroy() {
         // XXX: Can I stop timeout handler directly?
         this._motion_points = [];
+
+        this._ripples.destroy();
+        this._ripples = null;
     }
 }
 
