@@ -207,6 +207,7 @@ class PapyrusManager {
                 // to run rearrange after show-window animation, use idle_add
                 _idle_add_oneshot(GLib.PRIORITY_DEFAULT, () => {
                     this.rearrange_windows(window, true, true);
+                    _move_cursor_to(window);
                 });
             };
 
@@ -267,22 +268,7 @@ class PapyrusManager {
         }
 
         this.rearrange_windows(window, true, true);
-
-        if (Main.overview.visible) {
-            return;
-        }
-
-        // if cursor not on the window, move it on it
-        var [cursor_x, cursor_y] = cursor.get_pointer();
-        var rect = window.get_frame_rect();
-
-        if (cursor_x < rect.x
-            || cursor_x > rect.x + rect.width
-            || cursor_y < rect.y
-            || cursor_y > rect.y + rect.height) {
-            var [x, y] = _get_move_point(cursor_x, cursor_y, rect);
-            cursor.move(x, y, WINDOW_MOVE_DURATION);
-        }
+        _move_cursor_to(window);
     }
 
     on_ignored_window_focus(window) {
@@ -589,6 +575,29 @@ function _get_y_offset(window) {
     _debug_log(`display.height = ${display_height}, y_offset = ${y_offset}, panel.height = ${panel_height}, panel.visible = ${Main.panel.visible}, space = ${space}, y = ${y}`);
 
     return y;
+}
+
+function _move_cursor_to(window) {
+    if (Main.overview.visible) {
+        return;
+    }
+
+    if (!cursor) {
+        _debug_log(`try to move cursor but no cursor`);
+        return;
+    }
+
+    // if cursor not on the window, move it on it
+    var [cursor_x, cursor_y] = cursor.get_pointer();
+    var rect = window.get_frame_rect();
+
+    if (cursor_x < rect.x
+        || cursor_x > rect.x + rect.width
+        || cursor_y < rect.y
+        || cursor_y > rect.y + rect.height) {
+        var [x, y] = _get_move_point(cursor_x, cursor_y, rect);
+        cursor.move(x, y, WINDOW_MOVE_DURATION);
+    }
 }
 
 function _get_move_point(cursor_x, cursor_y, window_rect) {
