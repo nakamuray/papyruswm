@@ -24,6 +24,7 @@ const mainloop = imports.mainloop;
 const { Clutter, GLib, Gio, Meta, Shell, St } = imports.gi;
 const Main = imports.ui.main;
 const Ripples = imports.ui.ripples;
+const Magnifier = imports.ui.magnifier;
 
 const OUT_OF_FOCUS_WINDOW_Y_OFFSET = 0.05;
 const WINDOW_SPACE = 16;
@@ -728,16 +729,12 @@ class Spotlight {
 
 class Cursor {
     constructor() {
-        var FPS = 30;
-
-        this._millisec_per_frame = Math.floor(1000 / FPS);
-        this._motion_points = [];
-
-        this._timeout_handler_id = null;
-
         this._ripples = new Ripples.Ripples(0.5, 0.5, 'ripple-pointer-location');
         this._ripples.addTo(Main.uiGroup);
 
+        this._cursor_actor = new Clutter.Actor({request_mode: Clutter.RequestMode.CONTENT_SIZE});
+        this._cursor_actor.content = new Magnifier.MouseSpriteContent();
+        this._cursor_tracker = Meta.CursorTracker.get_for_display(global.display);
     }
     get_seat() {
         return Clutter.get_default_backend().get_default_seat();
@@ -746,49 +743,65 @@ class Cursor {
         var [x, y, _] = global.get_pointer();
         return [x, y];
     }
+    show_system_cursor() {
+        var seat = this.get_seat();
+        if (seat.is_unfocus_inhibited()) {
+            seat.uninhibit_unfocus();
+        }
+        this._cursor_tracker.set_pointer_visible(true);
+    }
+    hide_system_cursor() {
+        var seat = this.get_seat();
+        if (!seat.is_unfocus_inhibited()) {
+            seat.inhibit_unfocus();
+        }
+        this._cursor_tracker.set_pointer_visible(false);
+    }
+    _update_cursor_texture() {
+        this._cursor_actor.content.texture = this._cursor_tracker.get_sprite();
+        var [x_hot, y_hot] = this._cursor_tracker.get_hot();
+        this._cursor_actor.set({
+            translation_x: -x_hot,
+            translation_y: -y_hot,
+        });
+    }
     move(x, y, duration) {
         duration = duration || 0;
 
-        var frame_in_duration = Math.floor(duration / this._millisec_per_frame);
-        if (!St.Settings.get().enable_animations || frame_in_duration == 0) {
+        if (!St.Settings.get().enable_animations || duration == 0) {
             this.get_seat().warp_pointer(x, y);
             return;
         }
 
+        this._update_cursor_texture();
+        global.stage.add_actor(this._cursor_actor);
+        global.stage.set_child_above_sibling(this._cursor_actor, null);
         var [current_x, current_y] = this.get_pointer();
-        for (var i = 1; i < frame_in_duration; i++) {
-            this._motion_points.push([
-                Math.floor(current_x + i * (x - current_x) / frame_in_duration),
-                Math.floor(current_y + i * (y - current_y) / frame_in_duration),
-            ]);
-        }
-        this._motion_points.push([x, y]);
-        this._start_move();
-    }
-    _start_move() {
-        if (this._timeout_handler_id !== null) {
-            return;
-        }
-        this._timeout_handler_id = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this._millisec_per_frame, this.on_timeout.bind(this));
-    }
-    on_timeout() {
-        if (this._motion_points.length == 0) {
-            this._timeout_handler_id = null;
-            return false;
-        }
-        var [x, y] = this._motion_points.shift();
+        this._cursor_actor.set_position(current_x, current_y);
+        this._cursor_actor.show();
+        this.hide_system_cursor();
         this.get_seat().warp_pointer(x, y);
-        if (this._motion_points.length == 0) {
-            this._ripples.playAnimation(x, y);
-        }
-        return true;
+
+        this._cursor_actor.ease({x, y, duration,
+            mode: Clutter.AnimationMode.EASE_IN_QUAD,
+            onComplete: () => {
+                this.show_system_cursor();
+                this._cursor_actor.hide();
+                global.stage.remove_actor(this._cursor_actor);
+                this._ripples.playAnimation(x, y);
+            },
+        });
     }
     destroy() {
-        // XXX: Can I stop timeout handler directly?
-        this._motion_points = [];
-
         this._ripples.destroy();
         this._ripples = null;
+
+        if (this._cursor_actor.get_parent()) {
+            this._cursor_actor.get_parent().remove_child(this._cursor_actor);
+        }
+        this._cursor_actor.destroy();
+        this._cursor_actor = null;
+        this._cursor_tracker = null;
     }
 }
 
