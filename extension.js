@@ -738,8 +738,13 @@ class Spotlight {
 
 class Cursor {
     constructor() {
-        this._ripples = new Ripples.Ripples(0.5, 0.5, 'ripple-pointer-location');
-        this._ripples.addTo(Main.uiGroup);
+        this._ripples = [];
+        for (var i = 0; i <= 5; i++) {
+            var r = new Ripples.Ripples(0.5, 0.5, 'ripple-pointer-location');
+            r.addTo(Main.uiGroup);
+            this._ripples.push(r);
+        }
+        this._timeout_source = null;
 
         this._cursor_actor = new Clutter.Actor({request_mode: Clutter.RequestMode.CONTENT_SIZE});
         this._cursor_actor.content = new Magnifier.MouseSpriteContent();
@@ -782,6 +787,8 @@ class Cursor {
             return;
         }
 
+        this._timeout_source?.destroy();
+
         this._update_cursor_texture();
         global.stage.add_actor(this._cursor_actor);
         global.stage.set_child_above_sibling(this._cursor_actor, null);
@@ -797,12 +804,39 @@ class Cursor {
                 this.show_system_cursor();
                 this._cursor_actor.hide();
                 global.stage.remove_actor(this._cursor_actor);
-                this._ripples.playAnimation(x, y);
+                this._ripples[0].playAnimation(x, y);
+
+                var count = 0;
+                const delta_threshold = 50;
+                var source = GLib.timeout_source_new(250);
+                source.set_callback(() => {
+                    if (count++ >= 2) {
+                        return GLib.SOURCE_REMOVE;
+                    }
+                    var [current_x, current_y] = this.get_pointer();
+                    var d = Math.abs(Math.sqrt((current_x - x) ** 2 + (current_y - y) ** 2));
+                    _debug_log(`x=${x}, y=${y}, current_x=${current_x}, current_y=${current_y}, d=${d}`);
+                    if (d > delta_threshold) {
+                        this._ripples[count].playAnimation(current_x, current_y);
+                    }
+                    x = current_x;
+                    y = current_y;
+
+                    return GLib.SOURCE_CONTINUE;
+                });
+                source.attach(null);
+                this._timeout_source = source;
             },
         });
     }
     destroy() {
-        this._ripples.destroy();
+        if (this._timeout_source) {
+            this._timeout_source.destroy();
+            this._timeout_source = null;
+        }
+        this._ripples.forEach((r) => {
+            r.destroy();
+        });
         this._ripples = null;
 
         if (this._cursor_actor.get_parent()) {
