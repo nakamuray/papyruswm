@@ -198,8 +198,18 @@ class PapyrusManager {
 
                 var last_focused_index = this._get_last_focused_index();
                 _debug_log(`insert window to ${last_focused_index + 1}`);
+                var last_focused_window = this._last_focused_window();
                 // insert window after currently focused window
                 this.managed_windows.splice(last_focused_index + 1, 0, window);
+
+                if (last_focused_window) {
+                    _debug_log(`move window to right side of ${last_focused_window.title}`);
+                    var rect = last_focused_window.get_frame_rect();
+                    var x = rect.x + rect.width + _scaled_window_space();
+                    var y = window.get_frame_rect().y;
+                    _debug_log(`x = ${x}, y = ${y}`);
+                    window.move_frame(true, x, y);
+                }
 
                 this._connect_window_once(window, "position-changed", this.on_window_position_changed.bind(this));
                 this._connect_window_once(window, "size-changed", this.on_window_size_changed.bind(this));
