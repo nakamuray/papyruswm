@@ -319,7 +319,7 @@ class PapyrusManager {
         this._rearranging = false;
         return ret;
     }
-    _rearrange_windows(base_window, show, animate) {
+    _rearrange_windows(base_window, show, animate, pos_request) {
         var base_index = this.managed_windows.indexOf(base_window);
         if (base_index == -1) {
             _debug_log(`base window "${base_window?.title}" is not managed, do nothing`);
@@ -334,30 +334,39 @@ class PapyrusManager {
 
         var window_space = _scaled_window_space();
 
+        var x, y;
+        if (pos_request) {
+            x = pos_request.x;
+            y = pos_request.y;
+        } else {
+            var rect = base_window.get_frame_rect();
+            x = rect.x;
+            y = rect.y;
+        }
+
         if (show) {
             // move window within display area if not
             var rect = base_window.get_frame_rect();
             var [display_width, display_height] = global.display.get_size();
-            _debug_log(`focused:x = ${rect.x}, width = ${rect.width}, display.width = ${display_width}`);
+            _debug_log(`focused:x = ${x}, width = ${rect.width}, display.width = ${display_width}`);
 
             var y = _get_y_offset(base_window);
 
-            if (rect.x < 0) {
+            if (x < 0) {
                 // if window is on the left side of window, move it to upper left
                 _debug_log(`move focused window within display area`);
                 _move_frame_with_animation(base_window, window_space / 2, y, animate);
-            } else if (rect.x + rect.width > display_width) {
+            } else if (x + rect.width > display_width) {
                 // if window is on the right side of window, move it to upper right
                 _debug_log(`move focused window within display area`);
                 _move_frame_with_animation(base_window, display_width - rect.width - window_space / 2, y, animate);
             } else {
                 // if displayed, move it to upper
-                _move_frame_with_animation(base_window, rect.x, y, animate);
+                _move_frame_with_animation(base_window, x, y, animate);
             }
         } else {
             var y = _get_y_offset(base_window);
-            var rect = base_window.get_frame_rect();
-            _move_frame_with_animation(base_window, rect.x, y, animate);
+            _move_frame_with_animation(base_window, x, y, animate);
         }
         // move other windows to a position based on the window one
 
@@ -467,8 +476,15 @@ class PapyrusManager {
         var next_index = this._get_next_index(focused_index);
         if (focused_index >=0 && next_index >= 0) {
             var window = this.managed_windows[focused_index];
-            _swap(this.managed_windows, focused_index, next_index);
-            this.rearrange_windows(window, false, true);
+            var rect = window.get_frame_rect();
+            var next_window = this.managed_windows[next_index];
+            var next_rect = next_window.get_frame_rect();
+            _array_swap(this.managed_windows, focused_index, next_index);
+            var pos_request = {
+                x: next_rect.x + next_rect.width - rect.width,
+                y: rect.y
+            };
+            this.rearrange_windows(window, true, true, pos_request);
         }
     }
 
@@ -482,8 +498,15 @@ class PapyrusManager {
         var previous_index = this._get_previous_index(focused_index);
         if (focused_index >= 0 && previous_index >= 0) {
             var window = this.managed_windows[focused_index];
-            _swap(this.managed_windows, focused_index, previous_index);
-            this.rearrange_windows(window, false, true);
+            var rect = window.get_frame_rect();
+            var previous_window = this.managed_windows[previous_index];
+            var previous_rect = previous_window.get_frame_rect();
+            _array_swap(this.managed_windows, focused_index, previous_index);
+            var pos_request = {
+                x: previous_rect.x,
+                y: rect.y
+            };
+            this.rearrange_windows(window, true, true, pos_request);
         }
     }
 
@@ -517,7 +540,7 @@ class PapyrusManager {
     }
 }
 
-function _swap(array, i, j) {
+function _array_swap(array, i, j) {
     [array[i], array[j]] = [array[j], array[i]];
 }
 
