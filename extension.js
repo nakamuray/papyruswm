@@ -538,6 +538,37 @@ class PapyrusManager {
         }
         return -1;
     }
+
+    move_window_right() {
+        var focused_index = this._get_last_focused_index();
+        var focused_window = this.managed_windows[focused_index];
+        if (focused_window != global.display.focus_window) {
+            // do nothing if actually focused window is not managed
+            return;
+        }
+        var rect = focused_window.get_frame_rect();
+        var [display_width, display_height] = global.display.get_size();
+        var pos_request = {
+            x: display_width,
+            y: rect.y
+        };
+        this.rearrange_windows(focused_window, true, true, pos_request);
+    }
+
+    move_window_left() {
+        var focused_index = this._get_last_focused_index();
+        var focused_window = this.managed_windows[focused_index];
+        if (focused_window != global.display.focus_window) {
+            // do nothing if actually focused window is not managed
+            return;
+        }
+        var rect = focused_window.get_frame_rect();
+        var pos_request = {
+            x: _scaled_window_space() / 2,
+            y: rect.y
+        };
+        this.rearrange_windows(focused_window, true, true, pos_request);
+    }
 }
 
 function _array_swap(array, i, j) {
@@ -1050,6 +1081,20 @@ class Extension {
             this.on_swap_previous.bind(this)
         );
         Main.wm.addKeybinding(
+            'papyrus-move-window-right',
+            this.settings,
+            Meta.KeyBindingFlags.PER_WINDOW,
+            Shell.ActionMode.NORMAL,
+            this.on_move_window_right.bind(this)
+        );
+        Main.wm.addKeybinding(
+            'papyrus-move-window-left',
+            this.settings,
+            Meta.KeyBindingFlags.PER_WINDOW,
+            Shell.ActionMode.NORMAL,
+            this.on_move_window_left.bind(this)
+        );
+        Main.wm.addKeybinding(
             'papyrus-toggle-float',
             this.settings,
             Meta.KeyBindingFlags.IGNORE_AUTOREPEAT|Meta.KeyBindingFlags.PER_WINDOW,
@@ -1098,6 +1143,8 @@ class Extension {
         Main.wm.removeKeybinding('papyrus-move-focus-previous');
         Main.wm.removeKeybinding('papyrus-swap-next');
         Main.wm.removeKeybinding('papyrus-swap-previous');
+        Main.wm.removeKeybinding('papyrus-move-window-right');
+        Main.wm.removeKeybinding('papyrus-move-window-left');
         Main.wm.removeKeybinding('papyrus-toggle-float');
         Main.wm.removeKeybinding('papyrus-cycle-resize-window');
         Main.wm.removeKeybinding('papyrus-cycle-resize-window-vertically');
@@ -1140,6 +1187,20 @@ class Extension {
         var workspace = global.workspaceManager.get_active_workspace();
         var papyrus = this._managers.get(workspace);
         papyrus.swap_previous();
+    }
+
+    on_move_window_right() {
+        _debug_log("papyrus-move-window-right");
+        var workspace = global.workspaceManager.get_active_workspace();
+        var papyrus = this._managers.get(workspace);
+        papyrus.move_window_right();
+    }
+
+    on_move_window_left() {
+        _debug_log("papyrus-move-window-left");
+        var workspace = global.workspaceManager.get_active_workspace();
+        var papyrus = this._managers.get(workspace);
+        papyrus.move_window_left();
     }
 
     on_toggle_float() {

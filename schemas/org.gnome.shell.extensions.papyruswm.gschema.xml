@@ -19,6 +19,15 @@
       <summary>Swap the focused window with the previous window</summary>
     </key>
 
+    <key type="as" name="papyrus-move-window-right">
+      <default><![CDATA[['<Super><Shift>period']]]></default>
+      <summary>Move the focused window to right side of display</summary>
+    </key>
+    <key type="as" name="papyrus-move-window-left">
+      <default><![CDATA[['<Super><Shift>comma']]]></default>
+      <summary>Move the focused window to left side of display</summary>
+    </key>
+
     <key type="as" name="papyrus-toggle-float">
       <default><![CDATA[['<Super>T']]]></default>
       <summary>Toggle window floating</summary>
