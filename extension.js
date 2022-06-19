@@ -21,7 +21,7 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
 const mainloop = imports.mainloop;
-const { Clutter, GLib, Gio, Meta, Shell, St } = imports.gi;
+const { Clutter, GLib, Gio, GObject, Meta, Shell, St } = imports.gi;
 const Main = imports.ui.main;
 const Ripples = imports.ui.ripples;
 const Magnifier = imports.ui.magnifier;
@@ -80,6 +80,7 @@ class PapyrusManager {
         if (workspace.active) {
             _idle_add_oneshot(GLib.PRIORITY_DEFAULT, () => {
                 this.rearrange_windows(this._last_focused_window(), true, true);
+                this._show_screen_edge_shadow();
             });
         }
     }
@@ -258,6 +259,8 @@ class PapyrusManager {
     on_window_position_changed(window) {
         _debug_log(`window "${window.title}" position changed`);
         this.rearrange_windows(window, false, false);
+
+        this._show_screen_edge_shadow();
     }
 
     on_window_size_changed(window) {
@@ -279,6 +282,8 @@ class PapyrusManager {
 
         this.rearrange_windows(window, true, true);
         _move_cursor_to(window);
+
+        this._show_screen_edge_shadow();
     }
 
     on_ignored_window_focus(window) {
@@ -568,6 +573,35 @@ class PapyrusManager {
             y: rect.y
         };
         this.rearrange_windows(focused_window, true, true, pos_request);
+    }
+
+    _show_screen_edge_shadow() {
+        if (this.managed_windows.length == 0) {
+            left_edge_shadow.off();
+            right_edge_shadow.off();
+            return;
+        }
+        var focused_window = global.display.focus_window;
+        if (focused_window &&
+            (focused_window.is_fullscreen() ||
+             (focused_window.maximized_vertically && focused_window.maximized_horizontally))) {
+            left_edge_shadow.off();
+            right_edge_shadow.off();
+            return;
+        }
+
+        if (this.managed_windows[0].get_frame_rect().x < 0) {
+            left_edge_shadow.on();
+        } else {
+            left_edge_shadow.off();
+        }
+        var [display_width, display_height] = global.display.get_size();
+        var last_rect = this.managed_windows[this.managed_windows.length - 1].get_frame_rect();
+        if (last_rect.x + last_rect.width > display_width) {
+            right_edge_shadow.on();
+        } else {
+            right_edge_shadow.off();
+        }
     }
 }
 
@@ -998,6 +1032,47 @@ class Gesture {
     }
 }
 
+var ScreenEdgeShadow = GObject.registerClass(
+class ScreenEdgeShadow extends St.Bin {
+    _init(edge) {
+        super._init({
+            style_class: 'papyrus-screen-edge-shadow'
+        });
+
+        global.window_group.add_actor(this);
+        global.window_group.set_child_above_sibling(this, null);
+
+        var [display_width, display_height] = global.display.get_size();
+        this.set_size(WINDOW_SPACE / 2, display_height);
+        switch (edge) {
+            case "left":
+                this.set_position(-(WINDOW_SPACE / 2), 0);
+                break;
+            case "right":
+                this.set_position(display_width, 0);
+                break;
+            default:
+                log(`unknown edge: "${edge}"`);
+        }
+        this.set_opacity(0);
+    }
+    on() {
+        if (this.get_opacity() == 255) {
+            return;
+        }
+        this.ease({opacity: 255, duration: 150});
+    }
+    off() {
+        if (this.get_opacity() == 0) {
+            return;
+        }
+        this.ease({opacity: 0, duration: 150});
+    }
+});
+
+var left_edge_shadow = null;
+var right_edge_shadow = null;
+
 class Extension {
     constructor() {
         this._enabled = false;
@@ -1124,6 +1199,10 @@ class Extension {
         this._gesture = new Gesture();
 
         cursor = new Cursor();
+        left_edge_shadow = new ScreenEdgeShadow('left');
+        left_edge_shadow.show();
+        right_edge_shadow = new ScreenEdgeShadow('right');
+        right_edge_shadow.show();
 
         this._enabled = true;
     }
@@ -1157,6 +1236,11 @@ class Extension {
 
         cursor.destroy();
         cursor = null;
+
+        left_edge_shadow.destroy();
+        left_edge_shadow = null;
+        right_edge_shadow.destroy();
+        right_edge_shadow = null;
 
         this._enabled = false;
     }
