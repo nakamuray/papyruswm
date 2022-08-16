@@ -1321,7 +1321,7 @@ class Extension {
         if (this._resize_state.id == window_id) {
             index = (this._resize_state.index + 1) % resize_window_ratios.length;
         } else {
-            resize_window_ratios.forEach((r, i) => {
+            resize_window_ratios.slice().reverse().forEach((r, i) => {
                 var width = Math.floor((display_width - _scaled_window_space() * 2) * r);
                 if (width > rect.width) {
                     index = i;
