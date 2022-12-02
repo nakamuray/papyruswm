@@ -4,7 +4,7 @@
   "uuid": "papyruswm@u7fa9.org",
   "settings-schema": "org.gnome.shell.extensions.papyruswm",
   "shell-version": [
-    "41", "42"
+    "42", "43"
   ],
   "version": 1
 }
