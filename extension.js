@@ -17,14 +17,16 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-
-const mainloop = imports.mainloop;
-const { Clutter, GLib, Gio, GObject, Meta, Shell, St } = imports.gi;
-const Main = imports.ui.main;
-const Ripples = imports.ui.ripples;
-const Magnifier = imports.ui.magnifier;
+import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
+import GObject from 'gi://GObject';
+import Meta from 'gi://Meta';
+import Shell from 'gi://Shell';
+import St from 'gi://St';
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as Ripples from 'resource:///org/gnome/shell/ui/ripples.js';
 
 const OUT_OF_FOCUS_WINDOW_Y_OFFSET = 0.05;
 const WINDOW_SPACE = 16;
@@ -834,6 +836,55 @@ class Spotlight {
     }
 }
 
+// XXX: copied from gnome-shell/js/ui/magnifier.js
+const MouseSpriteContent = GObject.registerClass({
+    Implements: [Clutter.Content],
+}, class MouseSpriteContent extends GObject.Object {
+    _init() {
+        super._init();
+        this._texture = null;
+    }
+
+    vfunc_get_preferred_size() {
+        if (!this._texture)
+            return [false, 0, 0];
+
+        return [true, this._texture.get_width(), this._texture.get_height()];
+    }
+
+    vfunc_paint_content(actor, node, _paintContext) {
+        if (!this._texture)
+            return;
+
+        let color = Clutter.Color.get_static(Clutter.StaticColor.WHITE);
+        let [minFilter, magFilter] = actor.get_content_scaling_filters();
+        let textureNode = new Clutter.TextureNode(this._texture,
+            color, minFilter, magFilter);
+        textureNode.set_name('MouseSpriteContent');
+        node.add_child(textureNode);
+
+        textureNode.add_rectangle(actor.get_content_box());
+    }
+
+    get texture() {
+        return this._texture;
+    }
+
+    set texture(coglTexture) {
+        if (this._texture === coglTexture)
+            return;
+
+        let oldTexture = this._texture;
+        this._texture = coglTexture;
+        this.invalidate();
+
+        if (!oldTexture || !coglTexture ||
+            oldTexture.get_width() !== coglTexture.get_width() ||
+            oldTexture.get_height() !== coglTexture.get_height())
+            this.invalidate_size();
+    }
+});
+
 class Cursor {
     constructor() {
         this._ripples = [];
@@ -845,7 +896,7 @@ class Cursor {
         this._timeout_source = null;
 
         this._cursor_actor = new Clutter.Actor({request_mode: Clutter.RequestMode.CONTENT_SIZE});
-        this._cursor_actor.content = new Magnifier.MouseSpriteContent();
+        this._cursor_actor.content = new MouseSpriteContent();
         this._cursor_tracker = Meta.CursorTracker.get_for_display(global.display);
     }
     get_seat() {
@@ -1073,8 +1124,9 @@ class ScreenEdgeShadow extends St.Bin {
 var left_edge_shadow = null;
 var right_edge_shadow = null;
 
-class Extension {
-    constructor() {
+export default class PapyrusWM extends Extension {
+    constructor(...args) {
+        super(...args);
         this._enabled = false;
         this._managers = new Map();
         this._workspaceManager_handlers = [];
@@ -1090,8 +1142,8 @@ class Extension {
             return;
         }
 
-        log(`enabling ${Me.metadata.name}`);
-        this.settings = ExtensionUtils.getSettings();
+        log(`enabling ${this.metadata.name}`);
+        this.settings = this.getSettings();
 
         for (var i = 0; i < global.workspaceManager.get_n_workspaces(); i += 1) {
             var workspace = global.workspaceManager.get_workspace_by_index(i);
@@ -1208,7 +1260,7 @@ class Extension {
     }
 
     disable() {
-        log(`disabling ${Me.metadata.name}`);
+        log(`disabling ${this.metadata.name}`);
 
         this._managers.forEach((papyrus, workspace) => {
             papyrus.disable();
@@ -1241,6 +1293,8 @@ class Extension {
         left_edge_shadow = null;
         right_edge_shadow.destroy();
         right_edge_shadow = null;
+
+        this.settings = null;
 
         this._enabled = false;
     }
@@ -1371,12 +1425,4 @@ class Extension {
         this._vertical_resize_state.id = window_id;
         this._vertical_resize_state.index = index;
     }
-}
-
-
-/* exported init */
-
-function init() {
-    log(`initializing ${Me.metadata.name}`);
-    return new Extension();
 }
