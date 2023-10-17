@@ -1000,15 +1000,24 @@ class Cursor {
 var cursor = null;
 
 class Gesture {
-    constructor() {
-        this.finger_count = 4;
+    constructor(settings) {
+        this._settings = settings
+        this.finger_count = this._settings.get_uint('papyrus-gesture-finger-count');
+        this._settings_changed_id = this._settings.connect('changed::papyrus-gesture-finger-count', this.on_settings_changed.bind(this));
+        _debug_log(`finger_count=${this.finger_count}`);
 
         this._target_window = null;
         this._capture_handler_id = global.stage.connect('captured-event::touchpad', this.on_capture_event.bind(this));
     }
     destroy() {
         global.stage.disconnect(this._capture_handler_id);
+        this._settings.disconnect(this._settings_changed_id);
+        this._settings = null;
         this._capture_handler_id = null;
+    }
+    on_settings_changed(settings, key) {
+        this.finger_count = settings.get_uint(key);
+        _debug_log(`settings changed, finger_count=${this.finger_count}`);
     }
     on_capture_event(actor, event) {
         if (event.type() !== Clutter.EventType.TOUCHPAD_SWIPE) {
@@ -1248,7 +1257,7 @@ export default class PapyrusWM extends Extension {
             this._spotlight.focus(global.display.focus_window);
         }
 
-        this._gesture = new Gesture();
+        this._gesture = new Gesture(this.settings);
 
         cursor = new Cursor();
         left_edge_shadow = new ScreenEdgeShadow('left');

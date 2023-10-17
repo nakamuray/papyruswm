@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
   <schema id="org.gnome.shell.extensions.papyruswm" path="/org/gnome/shell/extensions/papyruswm/">
+    <key type="u" name="papyrus-gesture-finger-count">
+      <default>4</default>
+      <summary>finger count used for gesture to move window</summary>
+    </key>
+
     <key type="as" name="papyrus-move-focus-next">
       <default><![CDATA[['<Super>period']]]></default>
       <summary>Move focus to the next window</summary>
