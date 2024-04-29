@@ -856,10 +856,9 @@ const MouseSpriteContent = GObject.registerClass({
         if (!this._texture)
             return;
 
-        let color = Clutter.Color.get_static(Clutter.StaticColor.WHITE);
         let [minFilter, magFilter] = actor.get_content_scaling_filters();
         let textureNode = new Clutter.TextureNode(this._texture,
-            color, minFilter, magFilter);
+            null, minFilter, magFilter);
         textureNode.set_name('MouseSpriteContent');
         node.add_child(textureNode);
 
@@ -898,6 +897,7 @@ class Cursor {
         this._cursor_actor = new Clutter.Actor({request_mode: Clutter.RequestMode.CONTENT_SIZE});
         this._cursor_actor.content = new MouseSpriteContent();
         this._cursor_tracker = Meta.CursorTracker.get_for_display(global.display);
+        this._cursor_unfocus_inhibited = false;
     }
     get_seat() {
         return Clutter.get_default_backend().get_default_seat();
@@ -908,15 +908,17 @@ class Cursor {
     }
     show_system_cursor() {
         var seat = this.get_seat();
-        if (seat.is_unfocus_inhibited()) {
+        if (seat._cursor_unfocus_inhibited) {
             seat.uninhibit_unfocus();
+            this._cursor_unfocus_inhibited = false;
         }
         this._cursor_tracker.set_pointer_visible(true);
     }
     hide_system_cursor() {
         var seat = this.get_seat();
-        if (!seat.is_unfocus_inhibited()) {
+        if (!seat._cursor_unfocus_inhibited) {
             seat.inhibit_unfocus();
+            this._cursor_unfocus_inhibited = true;
         }
         this._cursor_tracker.set_pointer_visible(false);
     }
@@ -939,7 +941,7 @@ class Cursor {
         this._timeout_source?.destroy();
 
         this._update_cursor_texture();
-        global.stage.add_actor(this._cursor_actor);
+        global.stage.add_child(this._cursor_actor);
         global.stage.set_child_above_sibling(this._cursor_actor, null);
         var [current_x, current_y] = this.get_pointer();
         this._cursor_actor.set_position(current_x, current_y);
@@ -952,7 +954,7 @@ class Cursor {
             onComplete: () => {
                 this.show_system_cursor();
                 this._cursor_actor.hide();
-                global.stage.remove_actor(this._cursor_actor);
+                global.stage.remove_child(this._cursor_actor);
                 this._ripples[0].playAnimation(x, y);
 
                 var count = 0;
@@ -1099,7 +1101,7 @@ class ScreenEdgeShadow extends St.Bin {
             style_class: 'papyrus-screen-edge-shadow'
         });
 
-        global.window_group.add_actor(this);
+        global.window_group.add_child(this);
         global.window_group.set_child_above_sibling(this, null);
 
         var [display_width, display_height] = global.display.get_size();
