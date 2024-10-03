@@ -473,6 +473,28 @@ class PapyrusManager {
         }
     }
 
+    move_focus_first() {
+        if (this.managed_windows.length == 0) {
+            _debug_log("no managed_windows, do nothing");
+            return;
+        }
+        var next_window = this.managed_windows[0];
+        var timestamp = global.display.get_current_time_roundtrip();
+        next_window.focus(timestamp);
+        next_window.raise();
+    }
+
+    move_focus_last() {
+        if (this.managed_windows.length == 0) {
+            _debug_log("no managed_windows, do nothing");
+            return;
+        }
+        var next_window = this.managed_windows[this.managed_windows.length - 1];
+        var timestamp = global.display.get_current_time_roundtrip();
+        next_window.focus(timestamp);
+        next_window.raise();
+    }
+
     swap_next() {
         var focused_index = this._get_last_focused_index();
         var focused_window = this.managed_windows[focused_index];
@@ -1205,6 +1227,20 @@ export default class PapyrusWM extends Extension {
             this.on_move_focus_previous.bind(this)
         );
         Main.wm.addKeybinding(
+            'papyrus-move-focus-first',
+            this.settings,
+            Meta.KeyBindingFlags.PER_WINDOW,
+            Shell.ActionMode.NORMAL,
+            this.on_move_focus_first.bind(this)
+        );
+        Main.wm.addKeybinding(
+            'papyrus-move-focus-last',
+            this.settings,
+            Meta.KeyBindingFlags.PER_WINDOW,
+            Shell.ActionMode.NORMAL,
+            this.on_move_focus_last.bind(this)
+        );
+        Main.wm.addKeybinding(
             'papyrus-swap-next',
             this.settings,
             Meta.KeyBindingFlags.PER_WINDOW,
@@ -1322,6 +1358,20 @@ export default class PapyrusWM extends Extension {
         var workspace = global.workspaceManager.get_active_workspace();
         var papyrus = this._managers.get(workspace);
         papyrus.move_focus_previous();
+    }
+
+    on_move_focus_first() {
+        _debug_log("papyrus-move-focus-first");
+        var workspace = global.workspaceManager.get_active_workspace();
+        var papyrus = this._managers.get(workspace);
+        papyrus.move_focus_first();
+    }
+
+    on_move_focus_last() {
+        _debug_log("papyrus-move-focus-last");
+        var workspace = global.workspaceManager.get_active_workspace();
+        var papyrus = this._managers.get(workspace);
+        papyrus.move_focus_last();
     }
 
     on_swap_next() {

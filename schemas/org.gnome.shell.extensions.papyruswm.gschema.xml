@@ -15,6 +15,15 @@
       <summary>Move focus to the previous window</summary>
     </key>
 
+    <key type="as" name="papyrus-move-focus-first">
+      <default><![CDATA[['<Super>m']]]></default>
+      <summary>Move focus to the first (left most) window</summary>
+    </key>
+    <key type="as" name="papyrus-move-focus-last">
+      <default><![CDATA[['<Super>slash']]]></default>
+      <summary>Move focus to the last (right most) window</summary>
+    </key>
+
     <key type="as" name="papyrus-swap-next">
       <default><![CDATA[['<Super><Ctrl>period']]]></default>
       <summary>Swap the focused window with the next window</summary>
