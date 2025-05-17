@@ -918,7 +918,7 @@ class Cursor {
 
         this._cursor_actor = new Clutter.Actor({request_mode: Clutter.RequestMode.CONTENT_SIZE});
         this._cursor_actor.content = new MouseSpriteContent();
-        this._cursor_tracker = Meta.CursorTracker.get_for_display(global.display);
+        this._cursor_tracker = global.backend.get_cursor_tracker()
         this._cursor_unfocus_inhibited = false;
     }
     get_seat() {
